@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct ktrecipeappApp: App {
+    @AppStorage("isGuestMode") private var isGuestMode: Bool = false
+    
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            if isGuestMode {
+                MainView()
+            } else {
+                LoginView()
+            }
         }
     }
 }
