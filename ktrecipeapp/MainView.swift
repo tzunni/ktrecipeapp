@@ -119,9 +119,12 @@ class RecipeManager: ObservableObject {
 
 // MARK: - Main View with Grid
 
+import SwiftUI
+
 struct MainView: View {
     @StateObject private var recipeManager = RecipeManager()
     @State private var showingAddRecipe = false
+    @AppStorage("isGuestMode") private var isGuestMode: Bool = true
     let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
@@ -140,15 +143,33 @@ struct MainView: View {
                 }.padding()
             }.navigationTitle("Recipes").toolbar {
                 ToolbarItem(placement:.navigationBarTrailing) {
-                    Button(action: {
-                        showingAddRecipe = true
-                    }) {
-                        Label("Add", systemImage: "plus")
+                    Menu {
+                        Button(action: {
+                            showingAddRecipe = true
+                        }) {
+                            Label("Add Recipe", systemImage: "plus")
+                        }
+                        Button(action: {
+                            isGuestMode = false
+                        }) {
+                            Label("Exit Guest Mode", systemImage: "arrow.backward.circle")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }.sheet(isPresented: $showingAddRecipe) {
                 AddRecipeView(recipeManager: recipeManager)
-            }.background(Color("celeste"))
+            }.background(Color("celeste")).onChange(of: isGuestMode) { newValue in
+                if !newValue {
+                    // Redirect to LoginView when guest mode is exited
+                    // This can be done by changing the root view or using a navigation action
+                    // For simplicity, a navigation link can be used:
+                    NavigationLink(destination: LoginView(), isActive: Binding.constant(true)) {
+                        EmptyView()
+                    }
+                }
+            }
         }
     }
 }
