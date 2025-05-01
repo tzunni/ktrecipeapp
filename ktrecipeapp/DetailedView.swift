@@ -1,18 +1,51 @@
-//
-//  DetailedView.swift
-//  ktrecipeapp
-//
-//  Created by Keith Bui on 5/1/25.
-//
-
 import SwiftUI
 
-struct DetailedView: View {
+struct IngredientsListView: View {
+    let ingredients: [String]
+
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        NavigationView {
+            List(ingredients, id: \.self) { ingredient in
+                Text(ingredient)
+            }.navigationTitle("Ingredients")
+        }
     }
 }
 
-#Preview {
-    DetailedView()
+struct DetailedRecipeView: View {
+    let recipe: Recipe
+    @State private var showingIngredients = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment:.leading) {
+                if recipe.isAssetImage, let imageName = recipe.imagePath {
+                    Image(imageName).resizable().scaledToFit().cornerRadius(10).padding()
+                } else if let imagePath = recipe.imagePath, let image = UIImage(contentsOfFile: imagePath) {
+                    Image(uiImage: image).resizable().scaledToFit().cornerRadius(10).padding()
+                } else {
+                    Rectangle().fill(Color.gray).frame(height: 200).cornerRadius(10).padding()
+                }
+
+                Text(recipe.title).font(.largeTitle).fontWeight(.bold).padding(.horizontal)
+
+                Text(recipe.description).font(.body).padding(.horizontal)
+
+                Text("Steps:").font(.headline).padding(.horizontal)
+
+                ForEach(recipe.steps, id: \.self) { step in
+                    Text("- \(step)").font(.body).padding(.horizontal)
+                }
+            }
+        }.navigationTitle("Recipe Details").overlay(
+            Button(action: {
+                showingIngredients = true
+            }) {
+                Image(systemName: "list.bullet").foregroundColor(.white).padding().background(Color.blue.opacity(0.7)).clipShape(Circle())
+            }.padding(),
+            alignment:.bottomTrailing
+        ).sheet(isPresented: $showingIngredients) {
+            IngredientsListView(ingredients: recipe.ingredients.map { "\($0.name): \($0.quantity)" })
+        }
+    }
 }

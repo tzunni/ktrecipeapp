@@ -3,19 +3,35 @@ import UIKit
 
 // MARK: - Recipe Model
 
+struct Ingredient: Codable, Identifiable {
+    let id: UUID
+    let name: String
+    let quantity: String
+
+    init(id: UUID = UUID(), name: String, quantity: String) {
+        self.id = id
+        self.name = name
+        self.quantity = quantity
+    }
+}
+
 struct Recipe: Identifiable, Codable {
     let id: UUID
     let title: String
     let description: String
-    let imagePath: String? // Store image file path or asset name
-    let isAssetImage: Bool // Flag to identify asset catalog images
+    let imagePath: String?
+    let isAssetImage: Bool
+    let ingredients: [Ingredient] // List of ingredients with quantities
+    let steps: [String]
 
-    init(id: UUID = UUID(), title: String, description: String, imagePath: String?, isAssetImage: Bool = false) {
+    init(id: UUID = UUID(), title: String, description: String, imagePath: String?, isAssetImage: Bool = false, ingredients: [Ingredient] = [], steps: [String] = []) {
         self.id = id
         self.title = title
         self.description = description
         self.imagePath = imagePath
         self.isAssetImage = isAssetImage
+        self.ingredients = ingredients
+        self.steps = steps
     }
 }
 
@@ -36,8 +52,50 @@ class RecipeManager: ObservableObject {
             self.recipes = decoded
         } else {
             self.recipes = [
-                Recipe(title: "Spaghetti Carbonara", description: "Classic Italian pasta with eggs, cheese, pancetta, and pepper.", imagePath: "spaghetti", isAssetImage: true),
-                Recipe(title: "Avocado Toast", description: "Simple and healthy avocado toast with seasoning.", imagePath: "avocado_toast", isAssetImage: true)
+                Recipe(
+                    title: "Spaghetti Carbonara",
+                    description: "Classic Italian pasta with eggs, cheese, pancetta, and pepper.",
+                    imagePath: "spaghetti",
+                    isAssetImage: true,
+                    ingredients: [
+                        Ingredient(name: "Spaghetti", quantity: "200g"),
+                        Ingredient(name: "Eggs", quantity: "2"),
+                        Ingredient(name: "Cheese", quantity: "50g"),
+                        Ingredient(name: "Pancetta", quantity: "100g"),
+                        Ingredient(name: "Pepper", quantity: "to taste")
+                    ],
+                    steps: [
+                        "Bring a large pot of salted water to a boil.",
+                        "Add spaghetti and cook until al dente, about 8-10 minutes.",
+                        "Meanwhile, cook pancetta in a skillet over medium heat until crispy.",
+                        "Beat eggs in a bowl and mix with grated cheese.",
+                        "Drain pasta, reserving some cooking water.",
+                        "Quickly toss hot pasta with egg mixture, adding reserved water as needed to create a creamy sauce.",
+                        "Add pancetta and season with pepper.",
+                        "Serve immediately with additional cheese on top."
+                    ]
+                ),
+                Recipe(
+                    title: "Avocado Toast",
+                    description: "Simple and healthy avocado toast with seasoning.",
+                    imagePath: "avocado_toast",
+                    isAssetImage: true,
+                    ingredients: [
+                        Ingredient(name: "Avocado", quantity: "1"),
+                        Ingredient(name: "Bread", quantity: "2 slices"),
+                        Ingredient(name: "Salt", quantity: "to taste"),
+                        Ingredient(name: "Pepper", quantity: "to taste"),
+                        Ingredient(name: "Lemon Juice", quantity: "1 tsp")
+                    ],
+                    steps: [
+                        "Toast bread slices until golden brown.",
+                        "Cut avocado in half, remove pit, and scoop flesh into a bowl.",
+                        "Mash avocado with a fork and season with salt, pepper, and lemon juice.",
+                        "Spread mashed avocado evenly on toasted bread slices.",
+                        "Optional: Top with additional toppings like sliced radishes, cherry tomatoes, or a sprinkle of seeds.",
+                        "Serve immediately."
+                    ]
+                )
             ]
         }
     }
@@ -101,20 +159,23 @@ struct RecipeCardView: View {
     let recipe: Recipe
 
     var body: some View {
-        VStack(alignment:.leading) {
-            if recipe.isAssetImage, let imageName = recipe.imagePath {
-                Image(imageName).resizable().scaledToFill().frame(height: 120).frame(width: 150).clipped().cornerRadius(10)
-            } else if let imagePath = recipe.imagePath, let image = UIImage(contentsOfFile: imagePath) {
-                Image(uiImage: image).resizable().scaledToFill().frame(height: 120).frame(width: 150).clipped().cornerRadius(10)
-            } else {
-                // Placeholder if no image is available
-                Rectangle().fill(Color.gray).frame(height: 120).frame(width: 150).cornerRadius(10)
-            }
+        NavigationLink(destination: DetailedRecipeView(recipe: recipe)) {
+            VStack(alignment:.leading) {
+                if recipe.isAssetImage, let imageName = recipe.imagePath {
+                    Image(imageName).resizable().scaledToFill().frame(height: 120).frame(width: 150).clipped().cornerRadius(10)
+                } else if let imagePath = recipe.imagePath, let image = UIImage(contentsOfFile: imagePath) {
+                    Image(uiImage: image).resizable().scaledToFill().frame(height: 120).frame(width: 150).clipped().cornerRadius(10)
+                } else {
+                    Rectangle().fill(Color.gray).frame(height: 120).frame(width: 150).cornerRadius(10)
+                }
 
-            Text(recipe.title).font(.headline).padding(.top, 5)
+                Text(recipe.title).font(.headline).padding(.top, 5)
 
-            Text(recipe.description).font(.caption).foregroundColor(.secondary).lineLimit(2)
-        }.padding().background(Color(.systemBackground)).cornerRadius(15).shadow(radius: 3).frame(width: 150).frame(height: 250)
+                Text(recipe.description).font(.caption).foregroundColor(.secondary).lineLimit(2)
+
+                Text("Ingredients: \(recipe.ingredients.count) items").font(.footnote).foregroundColor(.secondary).padding(.top, 2)
+            }.padding().background(Color(.systemBackground)).cornerRadius(15).shadow(radius: 3).frame(width: 150).frame(height: 250)
+        }
     }
 }
 
@@ -160,6 +221,10 @@ struct AddRecipeView: View {
 
     @State private var title = ""
     @State private var description = ""
+    @State private var ingredientName = ""
+    @State private var ingredientQuantity = ""
+    @State private var ingredients: [Ingredient] = []
+    @State private var stepsText = ""
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
 
@@ -169,6 +234,31 @@ struct AddRecipeView: View {
                 Section(header: Text("Recipe Info")) {
                     TextField("Title", text: $title)
                     TextField("Description", text: $description)
+                    
+                    Section(header: Text("Ingredients")) {
+                        HStack {
+                            TextField("Ingredient Name", text: $ingredientName)
+                            TextField("Quantity", text: $ingredientQuantity)
+                            Button("Add") {
+                                if !ingredientName.isEmpty && !ingredientQuantity.isEmpty {
+                                    let newIngredient = Ingredient(name: ingredientName, quantity: ingredientQuantity)
+                                    ingredients.append(newIngredient)
+                                    ingredientName = ""
+                                    ingredientQuantity = ""
+                                }
+                            }
+                        }
+                        
+                        List {
+                            ForEach(ingredients) { ingredient in
+                                Text("\(ingredient.name): \(ingredient.quantity)")
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text("Steps")) {
+                        TextField("Steps (comma separated)", text: $stepsText)
+                    }
 
                     Button(action: {
                         showImagePicker = true
@@ -195,7 +285,9 @@ struct AddRecipeView: View {
                                 title: title,
                                 description: description,
                                 imagePath: imagePath,
-                                isAssetImage: false // User-uploaded images are not from asset catalog
+                                isAssetImage: false,
+                                ingredients: ingredients,
+                                steps: stepsText.split(separator: ",").map { $0.trimmingCharacters(in:.whitespaces) }
                             )
                             recipeManager.addRecipe(newRecipe)
                             dismiss()
@@ -208,7 +300,6 @@ struct AddRecipeView: View {
         }
     }
 
-    // Function to save image to documents directory
     func saveImageToDocuments(imageData: Data) -> String? {
         let fileName = UUID().uuidString + ".jpg"
         let fileURL = FileManager.default.urls(for:.documentDirectory, in:.userDomainMask)[0].appendingPathComponent(fileName)
