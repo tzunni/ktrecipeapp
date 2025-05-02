@@ -21,7 +21,7 @@ struct Recipe: Identifiable, Codable {
     let description: String
     let imagePath: String?
     let isAssetImage: Bool
-    let ingredients: [Ingredient] // List of ingredients with quantities
+    let ingredients: [Ingredient]
     let steps: [String]
 
     init(id: UUID = UUID(), title: String, description: String, imagePath: String?, isAssetImage: Bool = false, ingredients: [Ingredient] = [], steps: [String] = []) {
@@ -162,9 +162,6 @@ struct MainView: View {
                 AddRecipeView(recipeManager: recipeManager)
             }.background(Color("celeste")).onChange(of: isGuestMode) { newValue in
                 if !newValue {
-                    // Redirect to LoginView when guest mode is exited
-                    // This can be done by changing the root view or using a navigation action
-                    // For simplicity, a navigation link can be used:
                     NavigationLink(destination: LoginView(), isActive: Binding.constant(true)) {
                         EmptyView()
                     }
